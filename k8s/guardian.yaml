@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardian
+  labels:
+    app: guardian
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: guardian
+  template:
+    metadata:
+      labels:
+        app: guardian
+    spec:
+      containers:
+        - name: guardian
+          image: us-east1-docker.pkg.dev/clestiq-shield/clestiq-shield/guardian:latest
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "384Mi"
+          ports:
+            - containerPort: 8002
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          env:
+            - name: GCP_PROJECT_ID
+              value: "clestiq-shield"
+            - name: OTEL_SERVICE_NAME
+              value: "clestiq-shield-guardian"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://$(HOST_IP):4317"
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardian
+spec:
+  selector:
+    app: guardian
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardian-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: guardian

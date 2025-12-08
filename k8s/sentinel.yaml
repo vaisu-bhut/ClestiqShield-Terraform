@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinel
+  labels:
+    app: sentinel
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sentinel
+  template:
+    metadata:
+      labels:
+        app: sentinel
+    spec:
+      containers:
+        - name: sentinel
+          image: us-east1-docker.pkg.dev/clestiq-shield/clestiq-shield/sentinel:latest
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "384Mi"
+          ports:
+            - containerPort: 8001
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          env:
+            - name: GCP_PROJECT_ID
+              value: "clestiq-shield"
+            - name: GUARDIAN_SERVICE_URL
+              value: "http://guardian:8002"
+            - name: OTEL_SERVICE_NAME
+              value: "clestiq-shield-sentinel"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://$(HOST_IP):4317"
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel
+spec:
+  selector:
+    app: sentinel
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sentinel-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sentinel
