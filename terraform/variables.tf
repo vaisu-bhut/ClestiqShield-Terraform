@@ -19,7 +19,7 @@ variable "db_instance_name" {
 }
 
 variable "db_name" {
-  description = "Database name"
+  description    = "Database name"
   type        = string
 }
 
