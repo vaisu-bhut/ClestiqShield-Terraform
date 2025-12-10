@@ -27,3 +27,9 @@ output "datadog_site" {
   description = "Datadog Site"
   value       = var.datadog_site
 }
+
+output "eagle_eye_secret_key" {
+  description = "Secret key for Eagle Eye service"
+  value       = var.eagle_eye_secret_key
+  sensitive   = true
+}

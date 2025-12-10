@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eagle-eye
+  labels:
+    app: eagle-eye
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eagle-eye
+  template:
+    metadata:
+      labels:
+        app: eagle-eye
+    spec:
+      containers:
+        - name: eagle-eye
+          image: us-east1-docker.pkg.dev/clestiq-shield/clestiq-shield/eagle-eye:latest
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "384Mi"
+          ports:
+            - containerPort: 8003
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: database-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eagle-eye-secrets
+                  key: secret-key
+            - name: ALGORITHM
+              value: "HS256"
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: OTEL_SERVICE_NAME
+              value: "clestiq-shield-eagle-eye"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://$(HOST_IP):4317"
+            - name: TELEMETRY_ENABLED
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eagle-eye
+spec:
+  type: ClusterIP
+  selector:
+    app: eagle-eye
+  ports:
+    - protocol: TCP
+      port: 8003
+      targetPort: 8003

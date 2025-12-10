@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 # Configuration - matches Terraform outputs
 $ProjectId = "clestiq-shield"
 $Zone = "us-east1-b"  # Zonal cluster
-$ClusterName = "clestiq-shield-gke"
+$ClusterName = "clestiq-shield-main-gke"
 
 Write-Host "Clestiq Shield - GKE Application Deployment" -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
@@ -75,6 +75,24 @@ if (!$ddSecretExists) {
     }
 }
 
+$eeSecretExists = kubectl get secret eagle-eye-secrets -n default --ignore-not-found 2>$null
+if (!$eeSecretExists) {
+    Write-Host "[WARN] Secret 'eagle-eye-secrets' not found. Creating from Terraform output..." -ForegroundColor Yellow
+    $terraformDir = Join-Path $PSScriptRoot "..\terraform"
+    Push-Location $terraformDir
+    $eeSecretKey = terraform output -raw eagle_eye_secret_key 2>$null
+    Pop-Location
+    
+    if ($eeSecretKey) {
+        kubectl create secret generic eagle-eye-secrets --from-literal=secret-key="$eeSecretKey"
+        Write-Host "[OK] Created eagle-eye-secrets from Terraform output" -ForegroundColor Green
+    } else {
+        Write-Host "[ERROR] Could not get eagle_eye_secret_key from Terraform. Create manually:" -ForegroundColor Red
+        Write-Host "kubectl create secret generic eagle-eye-secrets --from-literal=secret-key=<YOUR_SECRET_KEY>" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
 Write-Host "[OK] All required secrets exist" -ForegroundColor Green
 
 # 3. Deploy manifests
@@ -94,7 +112,7 @@ else {
 Write-Host "[4/5] Waiting for deployments to be ready..." -ForegroundColor Yellow
 Write-Host "(This may take 2-3 minutes for first-time deployment)" -ForegroundColor Gray
 
-$deployments = @("gateway", "sentinel", "guardian")
+$deployments = @("gateway", "sentinel", "guardian", "eagle-eye")
 foreach ($dep in $deployments) {
     Write-Host "  Waiting for $dep..." -ForegroundColor Gray
     kubectl rollout status deployment/$dep --timeout=180s 2>$null

@@ -8,7 +8,7 @@ resource "random_password" "db_password" {
 
 # Cloud SQL PostgreSQL Instance
 resource "google_sql_database_instance" "postgres" {
-  name             = var.db_instance_name
+  name             = "${var.db_instance_name}-${var.environment}"
   database_version = "POSTGRES_17"
   region           = var.region
   project          = var.project_id
@@ -17,11 +17,11 @@ resource "google_sql_database_instance" "postgres" {
   deletion_protection = false # Set to true in production
 
   settings {
-    edition           = "ENTERPRISE"  # Use ENTERPRISE edition for db-f1-micro support
-    tier              = "db-f1-micro" # Cheapest sandbox tier: shared core, 0.6 GB RAM
-    availability_type = "ZONAL"       # Single zone
+    edition           = "ENTERPRISE" # Use ENTERPRISE edition for db-f1-micro support
+    tier              = var.db_tier
+    availability_type = "ZONAL" # Single zone
     disk_type         = "PD_SSD"
-    disk_size         = 10
+    disk_size         = var.db_disk_size
 
     # IP configuration - Private IP with VPC peering
     ip_configuration {
@@ -32,6 +32,10 @@ resource "google_sql_database_instance" "postgres" {
     database_flags {
       name  = "max_connections"
       value = "100"
+    }
+
+    user_labels = {
+      env = var.environment
     }
   }
 
@@ -52,7 +56,7 @@ resource "google_sql_database_instance" "postgres" {
 
 # Private VPC connection for Cloud SQL
 resource "google_compute_global_address" "private_ip_address" {
-  name          = "${var.db_instance_name}-private-ip"
+  name          = "${var.db_instance_name}-${var.environment}-private-ip"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
@@ -74,6 +78,10 @@ resource "google_sql_database" "database" {
   name     = var.db_name
   instance = google_sql_database_instance.postgres.name
   project  = var.project_id
+
+  # Database is automatically deleted when instance is deleted
+  # Skip individual deletion to avoid ordering issues
+  deletion_policy = "ABANDON"
 }
 
 # Create database user
@@ -82,4 +90,11 @@ resource "google_sql_user" "user" {
   instance = google_sql_database_instance.postgres.name
   password = random_password.db_password.result
   project  = var.project_id
+
+  # User is automatically deleted when instance is deleted
+  # Skip individual deletion to avoid "role owns objects" error
+  deletion_policy = "ABANDON"
+
+  # Ensure database is created first (and deleted first on destroy)
+  depends_on = [google_sql_database.database]
 }

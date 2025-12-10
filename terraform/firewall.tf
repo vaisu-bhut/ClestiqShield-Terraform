@@ -1,6 +1,6 @@
 # Internal firewall - allow communication between VPC resources
 resource "google_compute_firewall" "allow_internal" {
-  name    = "${var.application_name}-allow-internal"
+  name    = "${var.application_name}-${var.environment}-allow-internal"
   network = google_compute_network.vpc.name
   project = var.project_id
 
@@ -25,7 +25,7 @@ resource "google_compute_firewall" "allow_internal" {
 
 # Allow health checks from GCP load balancers
 resource "google_compute_firewall" "allow_health_checks" {
-  name    = "${var.application_name}-allow-health-checks"
+  name    = "${var.application_name}-${var.environment}-allow-health-checks"
   network = google_compute_network.vpc.name
   project = var.project_id
 
@@ -36,14 +36,14 @@ resource "google_compute_firewall" "allow_health_checks" {
 
   # GCP health check ranges
   source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
-  target_tags   = ["gke-node"]
+  target_tags   = ["gke-node", "${var.application_name}-${var.environment}-gke"]
   priority      = 900
   description   = "Allow GCP health checks to reach GKE nodes"
 }
 
 # Allow external access to gateway LoadBalancer
 resource "google_compute_firewall" "allow_gateway_external" {
-  name    = "${var.application_name}-allow-gateway-external"
+  name    = "${var.application_name}-${var.environment}-allow-gateway-external"
   network = google_compute_network.vpc.name
   project = var.project_id
 
@@ -53,7 +53,7 @@ resource "google_compute_firewall" "allow_gateway_external" {
   }
 
   source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["gke-node"]
+  target_tags   = ["gke-node", "${var.application_name}-${var.environment}-gke"]
   priority      = 800
   description   = "Allow external traffic to gateway service"
 }

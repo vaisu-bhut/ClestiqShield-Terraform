@@ -1,6 +1,6 @@
 # GKE Cluster - Zonal for predictable node count
 resource "google_container_cluster" "primary" {
-  name     = "${var.application_name}-gke"
+  name     = "${var.application_name}-${var.environment}-gke"
   location = var.zone
   project  = var.project_id
 
@@ -18,9 +18,9 @@ resource "google_container_cluster" "primary" {
   }
 
   node_config {
-    disk_size_gb = 50
-    disk_type    = "pd-standard"
-    machine_type = "e2-standard-4"
+    disk_size_gb = var.node_disk_size
+    disk_type    = var.node_disk_type
+    machine_type = var.machine_type
   }
 
   depends_on = [
@@ -30,15 +30,15 @@ resource "google_container_cluster" "primary" {
 
 # Managed node pool with proper autoscaling
 resource "google_container_node_pool" "primary_nodes" {
-  name     = "${var.application_name}-node-pool"
+  name     = "${var.application_name}-${var.environment}-node-pool"
   location = var.zone
   cluster  = google_container_cluster.primary.name
   project  = var.project_id
 
   initial_node_count = 1
   autoscaling {
-    min_node_count = 1
-    max_node_count = 3
+    min_node_count = var.min_node_count
+    max_node_count = var.max_node_count
   }
 
   # Prevent Terraform drift from autoscaler changes
@@ -48,20 +48,20 @@ resource "google_container_node_pool" "primary_nodes" {
 
   node_config {
     preemptible  = true
-    machine_type = "e2-standard-4"
+    machine_type = var.machine_type
 
-    # Use HDD to save SSD quota
-    disk_size_gb = 50
-    disk_type    = "pd-standard"
+    # Use HDD to save SSD quota (default, but variable allows override)
+    disk_size_gb = var.node_disk_size
+    disk_type    = var.node_disk_type
 
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
 
     labels = {
-      env = "sandbox"
+      env = var.environment
     }
 
-    tags = ["gke-node", "${var.application_name}-gke"]
+    tags = ["gke-node", "${var.application_name}-${var.environment}-gke"]
   }
 }
