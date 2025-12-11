@@ -33,3 +33,8 @@ output "eagle_eye_secret_key" {
   value       = var.eagle_eye_secret_key
   sensitive   = true
 }
+
+output "gateway_static_ip" {
+  description = "Static IP Address reserved for the Gateway LoadBalancer"
+  value       = google_compute_address.gateway_ip.address
+}
