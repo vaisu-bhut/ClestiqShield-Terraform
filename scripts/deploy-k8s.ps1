@@ -108,6 +108,27 @@ else {
     exit 1
 }
 
+# 3.5 Patch Gateway Service with Static IP
+Write-Host "[3.5/5] Configuring Gateway Static IP..." -ForegroundColor Yellow
+$terraformDir = Join-Path $PSScriptRoot "..\terraform"
+Push-Location $terraformDir
+    Try {
+        $staticIp = terraform output -raw gateway_static_ip 2>$null
+    } Catch {
+        $staticIp = $null
+    }
+Pop-Location
+
+if ($staticIp) {
+    Write-Host "  Found Static IP: $staticIp" -ForegroundColor Gray
+    # Patch the service to use the loadBalancerIP
+    # We use --type=merge to ensure we only update the specific field
+    kubectl patch svc gateway -p "{\`"spec\`": {\`"loadBalancerIP\`": \`"$staticIp\`"}}"
+    Write-Host "  [OK] Patched Gateway service with Static IP" -ForegroundColor Green
+} else {
+    Write-Host "  [WARN] No static IP found in Terraform output. Using ephemeral IP." -ForegroundColor Yellow
+}
+
 # 4. Wait for deployments
 Write-Host "[4/5] Waiting for deployments to be ready..." -ForegroundColor Yellow
 Write-Host "(This may take 2-3 minutes for first-time deployment)" -ForegroundColor Gray
@@ -137,6 +158,7 @@ if ($lbIP) {
     Write-Host "[DONE] Application deployed!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Gateway URL: http://$lbIP" -ForegroundColor Cyan
+    Write-Host "DNS: http://api.shield.clestiq.com" -ForegroundColor Cyan
     Write-Host "Health Check: curl http://$lbIP/health" -ForegroundColor Cyan
 } else {
     Write-Host "[INFO] LoadBalancer IP not ready yet. Run this to check:" -ForegroundColor Yellow
