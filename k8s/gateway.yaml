@@ -13,6 +13,10 @@ spec:
     metadata:
       labels:
         app: gateway
+        tags.datadoghq.com/env: "production"
+        tags.datadoghq.com/service: "clestiq-shield-gateway"
+        tags.datadoghq.com/version: "1.0.0"
+        tags.datadoghq.com/source: "python"
     spec:
       containers:
         - name: gateway
@@ -55,14 +59,47 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: database-url
-            - name: HOST_IP
+            # Datadog Unified Service Tagging
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+            - name: DD_SERVICE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/service']
+            - name: DD_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/version']
+            # Datadog Agent Host
+            - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
-            - name: OTEL_SERVICE_NAME
-              value: "clestiq-shield-gateway"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://$(HOST_IP):4318"
+            - name: DD_TRACE_AGENT_PORT
+              value: "8126"
+            # Datadog Unix Domain Sockets (UDS) - Recommended for K8s
+            - name: DD_TRACE_AGENT_URL
+              value: "unix:///var/run/datadog/apm.socket"
+            - name: DD_DOGSTATSD_SOCKET
+              value: "/var/run/datadog/dsd.socket"
+            # Enable Datadog Features
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_PROFILING_ENABLED
+              value: "true"
+            - name: DD_RUNTIME_METRICS_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: datadog-socket
+              mountPath: /var/run/datadog
+              readOnly: false
+      volumes:
+        - name: datadog-socket
+          hostPath:
+            path: /var/run/datadog/
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

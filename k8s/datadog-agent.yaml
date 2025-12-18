@@ -1,0 +1,344 @@
+---
+# Service Account for Datadog Agent
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: datadog-agent
+  namespace: default
+---
+# ClusterRole for Datadog Agent
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: datadog-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - events
+      - endpoints
+      - pods
+      - nodes
+      - componentstatuses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - datadogtoken
+      - datadog-leader-election
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - nonResourceURLs:
+      - /version
+      - /healthz
+      - /metrics
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - replicasets
+      - daemonsets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+---
+# ClusterRoleBinding for Datadog Agent
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: datadog-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: datadog-agent
+subjects:
+  - kind: ServiceAccount
+    name: datadog-agent
+    namespace: default
+---
+# DaemonSet for Datadog Agent
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: datadog-agent
+  namespace: default
+  labels:
+    app: datadog-agent
+spec:
+  selector:
+    matchLabels:
+      app: datadog-agent
+  template:
+    metadata:
+      labels:
+        app: datadog-agent
+      name: datadog-agent
+    spec:
+      serviceAccountName: datadog-agent
+      containers:
+        - name: agent
+          image: gcr.io/datadoghq/agent:7
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          ports:
+            - containerPort: 8125
+              name: dogstatsdport
+              protocol: UDP
+            - containerPort: 8126
+              name: traceport
+              protocol: TCP
+          env:
+            # Datadog API Configuration
+            - name: DD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: datadog-secrets
+                  key: api-key
+            - name: DD_SITE
+              valueFrom:
+                secretKeyRef:
+                  name: datadog-secrets
+                  key: site
+
+            # Kubernetes Configuration
+            - name: DD_KUBERNETES_KUBELET_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: KUBERNETES
+              value: "yes"
+            - name: DD_KUBERNETES_KUBELET_NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
+            # APM Configuration
+            - name: DD_APM_ENABLED
+              value: "true"
+            - name: DD_APM_NON_LOCAL_TRAFFIC
+              value: "true"
+            - name: DD_APM_RECEIVER_PORT
+              value: "8126"
+            - name: DD_APM_RECEIVER_SOCKET
+              value: "/var/run/datadog/apm.socket"
+
+            # Log Collection Configuration
+            - name: DD_LOGS_ENABLED
+              value: "true"
+            - name: DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL
+              value: "true"
+            - name: DD_LOGS_CONFIG_K8S_CONTAINER_USE_FILE
+              value: "true"
+            - name: DD_LOGS_CONFIG_AUTO_MULTI_LINE_DETECTION
+              value: "true"
+
+            # Process Monitoring
+            - name: DD_PROCESS_AGENT_ENABLED
+              value: "true"
+            - name: DD_SYSTEM_PROBE_ENABLED
+              value: "true"
+
+            # Universal Service Monitoring
+            - name: DD_SYSTEM_PROBE_SERVICE_MONITORING_ENABLED
+              value: "true"
+
+            # Container Image Collection
+            - name: DD_CONTAINER_IMAGE_ENABLED
+              value: "true"
+
+            # DogStatsD Configuration
+            - name: DD_DOGSTATSD_NON_LOCAL_TRAFFIC
+              value: "true"
+            - name: DD_DOGSTATSD_SOCKET
+              value: "/var/run/datadog/dsd.socket"
+
+            # Health and Performance
+            - name: DD_HEALTH_PORT
+              value: "5555"
+            - name: DD_CMD_PORT
+              value: "5001"
+
+            # Environment Tagging
+            - name: DD_ENV
+              value: "production"
+            - name: DD_TAGS
+              value: "environment:production"
+
+            # Hostname
+            - name: DD_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
+            # Profiling Configuration
+            - name: DD_PROFILING_ENABLED
+              value: "true"
+            - name: DD_RUNTIME_METRICS_ENABLED
+              value: "true"
+            - name: DD_PROFILING_AGENTLESS
+              value: "false"
+
+            # Enhanced Service Monitoring
+            - name: DD_SERVICE_MONITORING_ENABLED
+              value: "true"
+            - name: DD_PROCESS_CONFIG_PROCESS_COLLECTION_ENABLED
+              value: "true"
+            - name: DD_ORCHESTRATOR_EXPLORER_ENABLED
+              value: "true"
+            - name: DD_SYSPROBE_SOCKET
+              value: "/var/run/datadog/sysprobe.sock"
+
+          volumeMounts:
+            - name: dockersocket
+              mountPath: /var/run/docker.sock
+              readOnly: true
+            - name: procdir
+              mountPath: /host/proc
+              readOnly: true
+            - name: cgroups
+              mountPath: /host/sys/fs/cgroup
+              readOnly: true
+            - name: pointerdir
+              mountPath: /opt/datadog-agent/run
+            - name: logpodpath
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: logcontainerpath
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: systemprobe-socket
+              mountPath: /var/run/datadog
+            - name: sysprobe-debug
+              mountPath: /sys/kernel/debug
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5555
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5555
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+
+        # System Probe Container (for Universal Service Monitoring)
+        - name: system-probe
+          image: gcr.io/datadoghq/agent:7
+          imagePullPolicy: Always
+          securityContext:
+            capabilities:
+              add:
+                - SYS_ADMIN
+                - SYS_RESOURCE
+                - SYS_PTRACE
+                - NET_ADMIN
+                - NET_BROADCAST
+                - NET_RAW
+                - IPC_LOCK
+                - CHOWN
+          command:
+            - /opt/datadog-agent/embedded/bin/system-probe
+          env:
+            - name: DD_SYSTEM_PROBE_ENABLED
+              value: "true"
+            - name: DD_SYSPROBE_SOCKET
+              value: "/var/run/datadog/sysprobe.sock"
+            - name: DD_SYSTEM_PROBE_SERVICE_MONITORING_ENABLED
+              value: "true"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: procdir
+              mountPath: /host/proc
+              readOnly: true
+            - name: cgroups
+              mountPath: /host/sys/fs/cgroup
+              readOnly: true
+            - name: debugfs
+              mountPath: /sys/kernel/debug
+            - name: systemprobe-socket
+              mountPath: /var/run/datadog
+            - name: modules
+              mountPath: /lib/modules
+              readOnly: true
+
+      volumes:
+        - name: dockersocket
+          hostPath:
+            path: /var/run/docker.sock
+        - name: procdir
+          hostPath:
+            path: /proc
+        - name: cgroups
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: pointerdir
+          hostPath:
+            path: /var/lib/datadog-agent/run
+            type: DirectoryOrCreate
+        - name: logpodpath
+          hostPath:
+            path: /var/log/pods
+        - name: logcontainerpath
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: systemprobe-socket
+          hostPath:
+            path: /var/run/datadog/
+            type: DirectoryOrCreate
+        - name: debugfs
+          hostPath:
+            path: /sys/kernel/debug
+        - name: sysprobe-debug
+          hostPath:
+            path: /sys/kernel/debug
+        - name: modules
+          hostPath:
+            path: /lib/modules
