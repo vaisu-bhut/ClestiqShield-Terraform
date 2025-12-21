@@ -44,3 +44,9 @@ output "datadog_app_key" {
   value       = var.datadog_app_key
   sensitive   = true
 }
+
+output "gemini_api_key" {
+  description = "Gemini API Key"
+  value       = var.gemini_api_key
+  sensitive   = true
+}

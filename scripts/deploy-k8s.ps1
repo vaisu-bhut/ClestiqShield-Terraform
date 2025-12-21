@@ -38,6 +38,7 @@ catch {
 # 2. Check/Create required secrets
 Write-Host "[2/5] Checking required secrets..." -ForegroundColor Yellow
 
+# Database Secret
 $dbSecretExists = kubectl get secret db-secrets -n default --ignore-not-found 2>$null
 if (!$dbSecretExists) {
     Write-Host "[WARN] Secret 'db-secrets' not found. Creating from Terraform output..." -ForegroundColor Yellow
@@ -56,6 +57,7 @@ if (!$dbSecretExists) {
     }
 }
 
+# Datadog Secret
 $ddSecretJson = kubectl get secret datadog-secrets -n default -o json --ignore-not-found
 if ($ddSecretJson) {
     $ddSecret = $ddSecretJson | ConvertFrom-Json
@@ -99,6 +101,7 @@ if ($regen) {
     }
 }
 
+# Eagle Eye Secret
 $eeSecretExists = kubectl get secret eagle-eye-secrets -n default --ignore-not-found 2>$null
 if (!$eeSecretExists) {
     Write-Host "[WARN] Secret 'eagle-eye-secrets' not found. Creating from Terraform output..." -ForegroundColor Yellow
@@ -117,20 +120,25 @@ if (!$eeSecretExists) {
     }
 }
 
-$gcpSecretExists = kubectl get secret gcp-credentials -n default --ignore-not-found 2>$null
-if (!$gcpSecretExists) {
-    Write-Host "[WARN] Secret 'gcp-credentials' not found. Creating from file..." -ForegroundColor Yellow
-    $credFile = Join-Path $PSScriptRoot "..\gcp-credentials.json"
+# Gemini Secret
+$geminiSecretExists = kubectl get secret gemini-secrets -n default --ignore-not-found 2>$null
+if (!$geminiSecretExists) {
+    Write-Host "[WARN] Secret 'gemini-secrets' not found. Creating from Terraform output..." -ForegroundColor Yellow
+    $terraformDir = Join-Path $PSScriptRoot "..\terraform"
+    Push-Location $terraformDir
+    $gemini_key = terraform output -raw gemini_api_key 2>$null
+    Pop-Location
     
-    if (Test-Path $credFile) {
-        kubectl create secret generic gcp-credentials --from-file=gcp-credentials.json="$credFile"
-        Write-Host "[OK] Created gcp-credentials from file" -ForegroundColor Green
+    if ($gemini_key) {
+        kubectl create secret generic gemini-secrets --from-literal=api-key="$gemini_key"
+        Write-Host "[OK] Created gemini-secrets from Terraform output." -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] gcp-credentials.json not found at $credFile" -ForegroundColor Red
-        exit 1
+        Write-Host "[WARN] Gemini API Key not found in Terraform output." -ForegroundColor Yellow
+        Write-Host "[INFO] Please create manually using: kubectl create secret generic gemini-secrets --from-literal=api-key=YOUR_KEY" -ForegroundColor Cyan
     }
+} else {
+    Write-Host "[OK] gemini-secrets exists" -ForegroundColor Green
 }
-
 
 Write-Host "[OK] All required secrets exist" -ForegroundColor Green
 

@@ -50,12 +50,38 @@ spec:
           env:
             - name: PYTHONUNBUFFERED
               value: "1"
-            - name: GCP_PROJECT_ID
-              value: "clestiq-shield"
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: "/etc/gcp/gcp-credentials.json"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gemini-secrets
+                  key: api-key
             - name: GUARDIAN_SERVICE_URL
               value: "http://guardian:8002"
+            - name: TELEMETRY_ENABLED
+              value: "true"
+            # Security Settings
+            - name: SECURITY_SANITIZATION_ENABLED
+              value: "true"
+            - name: SECURITY_PII_REDACTION_ENABLED
+              value: "true"
+            - name: SECURITY_XSS_PROTECTION_ENABLED
+              value: "true"
+            - name: SECURITY_SQL_INJECTION_DETECTION_ENABLED
+              value: "true"
+            - name: SECURITY_COMMAND_INJECTION_DETECTION_ENABLED
+              value: "true"
+            - name: SECURITY_LLM_CHECK_THRESHOLD
+              value: "0.85"
+            # TOON Conversion
+            - name: TOON_CONVERSION_ENABLED
+              value: "true"
+            # LLM Settings
+            - name: LLM_FORWARD_ENABLED
+              value: "true"
+            - name: LLM_MODEL_NAME
+              value: "gemini-2.5-flash"
+            - name: LLM_MAX_TOKENS
+              value: "8192"
             # Datadog Unified Service Tagging
             - name: DD_ENV
               valueFrom:
@@ -92,17 +118,13 @@ spec:
             - name: datadog-socket
               mountPath: /var/run/datadog
               readOnly: false
-            - name: gcp-credentials
-              mountPath: /etc/gcp
-              readOnly: true
+
       volumes:
         - name: datadog-socket
           hostPath:
             path: /var/run/datadog/
             type: DirectoryOrCreate
-        - name: gcp-credentials
-          secret:
-            secretName: gcp-credentials
+
 ---
 apiVersion: v1
 kind: Service

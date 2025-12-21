@@ -50,10 +50,11 @@ spec:
           env:
             - name: PYTHONUNBUFFERED
               value: "1"
-            - name: GCP_PROJECT_ID
-              value: "clestiq-shield"
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: "/etc/gcp/gcp-credentials.json"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gemini-secrets
+                  key: api-key
             # Datadog Unified Service Tagging
             - name: DD_ENV
               valueFrom:
