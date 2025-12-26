@@ -85,8 +85,8 @@ spec:
             # Datadog Unix Domain Sockets (UDS) - Recommended for K8s
             - name: DD_TRACE_AGENT_URL
               value: "unix:///var/run/datadog/apm.socket"
-            - name: DD_DOGSTATSD_URL
-              value: "unix:///var/run/datadog/dsd.socket"
+            - name: DD_DOGSTATSD_SOCKET
+              value: "/var/run/datadog/dsd.socket"
             # Enable Datadog Features
             - name: DD_LOGS_INJECTION
               value: "true"
