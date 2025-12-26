@@ -59,6 +59,15 @@ spec:
                 secretKeyRef:
                   name: db-secrets
                   key: database-url
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: ALGORITHM
+              value: "HS256"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eagle-eye-secrets
+                  key: secret-key
             # Datadog Unified Service Tagging
             - name: DD_ENV
               valueFrom:
