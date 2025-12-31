@@ -33,7 +33,7 @@ graph TD
             
             subgraph "Infrastructure"
                 Redis[(Redis Cache)]
-                DD[Datadog Agent (DaemonSet)]
+                DD["Datadog Agent (DaemonSet)"]
             end
         end
         
