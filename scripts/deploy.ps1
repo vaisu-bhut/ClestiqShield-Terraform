@@ -25,9 +25,10 @@ $env:PROJECT_ID = "clestiq-shield"
 gcloud config set project $env:PROJECT_ID
 Write-Host "[OK] GCP project set to $env:PROJECT_ID" -ForegroundColor Green
 
-# Change to terraform directory (from scripts/ to terraform/)
+# Change to terraform directory (Script is in scripts/, so terraform is ../terraform)
 Write-Host "[*] Changing to terraform directory..." -ForegroundColor Yellow
-Set-Location .\terraform
+$TerraformDir = Join-Path $PSScriptRoot "..\terraform"
+Set-Location $TerraformDir
 
 # Initialize Terraform
 Write-Host "[*] Initializing Terraform..." -ForegroundColor Yellow
