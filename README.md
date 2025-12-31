@@ -47,6 +47,7 @@ graph TD
     
     subgraph "External AI Services"
         Gemini[Google Gemini API]
+        DDCloud[Datadog Cloud Platform]
     end
 
     %% Request Flow
@@ -81,6 +82,12 @@ graph TD
     Gateway -. Metrics .-> DD
     EagleEye -. Metrics .-> DD
     
+    %% Kube State Metrics
+    KSM -. Cluster Stats .-> DD
+    
+    %% Datadog Export
+    DD == Encrypted Export ==> DDCloud
+    
     style User fill:#f9f,stroke:#000,stroke-width:2px,color:#000
     style LB fill:#bbf,stroke:#000,stroke-width:2px,color:#000
     style Gateway fill:#bfb,stroke:#000,stroke-width:2px,color:#000
@@ -89,6 +96,7 @@ graph TD
     style Guardian fill:#bfb,stroke:#000,stroke-width:2px,color:#000
     style Gemini fill:#fbb,stroke:#000,stroke-width:2px,color:#000
     style DD fill:#ff9,stroke:#000,stroke-width:2px,color:#000
+    style DDCloud fill:#632CA6,stroke:#000,stroke-width:2px,color:#fff
 ```
 
 ---
