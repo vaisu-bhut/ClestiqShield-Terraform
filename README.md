@@ -80,14 +80,14 @@ graph TD
     Gateway -. Metrics .-> DD
     EagleEye -. Metrics .-> DD
     
-    style User fill:#f9f,stroke:#333
-    style LB fill:#bbf,stroke:#333
-    style Gateway fill:#bfb,stroke:#333
-    style EagleEye fill:#bfb,stroke:#333
-    style Sentinel fill:#bfb,stroke:#333
-    style Guardian fill:#bfb,stroke:#333
-    style Gemini fill:#fbb,stroke:#333
-    style DD fill:#ff9,stroke:#333
+    style User fill:#f9f,stroke:#000,stroke-width:2px,color:#000
+    style LB fill:#bbf,stroke:#000,stroke-width:2px,color:#000
+    style Gateway fill:#bfb,stroke:#000,stroke-width:2px,color:#000
+    style EagleEye fill:#bfb,stroke:#000,stroke-width:2px,color:#000
+    style Sentinel fill:#bfb,stroke:#000,stroke-width:2px,color:#000
+    style Guardian fill:#bfb,stroke:#000,stroke-width:2px,color:#000
+    style Gemini fill:#fbb,stroke:#000,stroke-width:2px,color:#000
+    style DD fill:#ff9,stroke:#000,stroke-width:2px,color:#000
 ```
 
 ---
