@@ -1,0 +1,32 @@
+# GCP Configuration
+project_id       = "clestiq-shield"
+region           = "us-east1"
+zone             = "us-east1-b"
+environment      = "main"
+application_name = "clestiq-shield"
+
+# GKE
+machine_type     = "e2-standard-4"
+node_disk_size   = 50
+node_disk_type   = "pd-standard"
+min_node_count   = 1
+max_node_count   = 3
+
+# Database
+db_instance_name = "clestiq-shield-db"
+db_name          = "clestiq_shield"
+db_user          = "clestiq_user"
+db_tier          = "db-custom-2-7680"
+db_disk_size     = 10
+
+# Network
+vpc_cidr            = "10.0.0.0/20"
+gke_pods_cidr       = "10.4.0.0/14"
+gke_services_cidr   = "10.8.0.0/20"
+
+# Secrets (Replace with actual values)
+datadog_api_key      = "your_datadog_api_key"
+datadog_app_key      = "your_datadog_app_key"
+datadog_site         = "us5.datadoghq.com"
+eagle_eye_secret_key = "your_eagle_eye_secret_key"
+gemini_api_key       = "your_gemini_api_key"
