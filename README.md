@@ -16,6 +16,7 @@ It ensures that the Clestiq Shield environment is reproducible, secure, and rigo
 
 ## 🏗️ System Architecture
 
+```mermaid
 graph TD
     User([User / Client])
     
@@ -87,6 +88,7 @@ graph TD
     style Guardian fill:#bfb,stroke:#333
     style Gemini fill:#fbb,stroke:#333
     style DD fill:#ff9,stroke:#333
+```
 
 ---
 
